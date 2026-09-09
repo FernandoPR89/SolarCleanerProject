@@ -1,0 +1,233 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+
+WorldInfo {
+  basicTimeStep 16
+}
+Viewpoint {
+  orientation 0.19078663951130442 -0.22435887915417538 -0.9556482362923429 4.605588355024328
+  position 0.16668434002023014 -5.021910775337313 3.0311656924390897
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Solid {
+  translation 0 0 0.5
+  rotation 1 0 0 0.2618
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.05 0.12 0.35
+        roughness 0.2
+        metalness 0.8
+      }
+      geometry Box {
+        size 2 4 0.05
+      }
+    }
+  ]
+  name "solar_panel"
+  boundingObject Box {
+    size 2 4 0.05
+  }
+}
+Robot {
+  translation -0.807891 1.63942 1.06937
+  rotation -0.09537868629933245 -0.09451548642332676 0.9909438576559095 -1.574435307179586
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.8 0.8 0.8
+      }
+      geometry Box {
+        size 0.4 0.3 0.1
+      }
+    }
+    HingeJoint {
+      jointParameters HingeJointParameters {
+        position 159.05805982211737
+        anchor -0.22 0 -0.02
+      }
+      device [
+        RotationalMotor {
+          name "left_motor"
+        }
+        PositionSensor {
+          name "left_sensor"
+        }
+      ]
+      endPoint Solid {
+        translation -0.22 0 -0.02
+        rotation -0.4814780918051217 -0.7323631396422564 0.48148009180550305 1.87736
+        children [
+          Pose {
+            rotation 0 0 1 1.5708
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  baseColor 0.1 0.1 0.1
+                  roughness 0.9
+                }
+                geometry Cylinder {
+                  height 0.04
+                  radius 0.06
+                }
+              }
+            ]
+          }
+        ]
+        name "left_wheel"
+        boundingObject Pose {
+          rotation 0 0 1 1.5708
+          children [
+            Cylinder {
+              height 0.04
+              radius 0.06
+            }
+          ]
+        }
+        physics Physics {
+        }
+      }
+    }
+    HingeJoint {
+      jointParameters HingeJointParameters {
+        position 159.05814583607435
+        anchor 0.22 0 -0.02
+      }
+      device [
+        RotationalMotor {
+          name "right_motor"
+        }
+        PositionSensor {
+          name "right_sensor"
+        }
+      ]
+      endPoint Solid {
+        translation 0.22 0 -0.02
+        rotation -0.48145605580148226 0.7323940848855779 -0.4814550558013664 1.87732
+        children [
+          Pose {
+            rotation 0 0 1 1.5708
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  baseColor 0.1 0.1 0.1
+                  roughness 0.9
+                }
+                geometry Cylinder {
+                  height 0.04
+                  radius 0.06
+                }
+              }
+            ]
+          }
+        ]
+        name "right_wheel"
+        boundingObject Pose {
+          rotation 0 0 1 1.5708
+          children [
+            Cylinder {
+              height 0.04
+              radius 0.06
+            }
+          ]
+        }
+        physics Physics {
+        }
+      }
+    }
+    DistanceSensor {
+      translation -0.15 0.24 -0.04
+      rotation 0 1 0 1.5708
+      name "ds_front_left"
+      lookupTable [
+        0 0 0
+        0.2 1000 0
+      ]
+    }
+    DistanceSensor {
+      translation 0.15 0.24 -0.04
+      rotation 0 1 0 1.5708
+      name "ds_front_right"
+      lookupTable [
+        0 0 0
+        0.2 1000 0
+      ]
+    }
+    HingeJoint {
+      jointParameters HingeJointParameters {
+        anchor 0 0.18 -0.01
+      }
+      device [
+        RotationalMotor {
+          name "brush_motor"
+        }
+      ]
+      endPoint Solid {
+        translation 0 0.18 -0.01
+        rotation 0 1 0 1.5708
+        children [
+          Pose {
+            rotation 0 0 1 1.5708
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  baseColor 0.1 0.6 0.2
+                  roughness 0.5
+                }
+                geometry Cylinder {
+                  height 0.42
+                  radius 0.04
+                }
+              }
+            ]
+          }
+        ]
+        name "brush"
+        boundingObject Pose {
+          rotation 0 0 1 1.5708
+          children [
+            Cylinder {
+              height 0.42
+              radius 0.04
+            }
+          ]
+        }
+        physics Physics {
+        }
+      }
+    }
+    Solid {
+      translation 0 -0.14 -0.05
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.5 0.5 0.5
+            roughness 1
+          }
+          geometry Sphere {
+            radius 0.03
+          }
+        }
+      ]
+      name "caster_wheel"
+      boundingObject Sphere {
+        radius 0.03
+      }
+      physics Physics {
+      }
+    }
+  ]
+  name "solar_cleaner"
+  boundingObject Box {
+    size 0.4 0.3 0.1
+  }
+  physics Physics {
+    mass 8
+  }
+  controller "solar_cleaner_controller"
+}

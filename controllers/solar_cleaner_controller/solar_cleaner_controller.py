@@ -1,4 +1,5 @@
 from controller import Robot
+import serial
 
 robot = Robot()
 TIME_STEP = int(robot.getBasicTimeStep())
@@ -41,31 +42,69 @@ BRUSH_CONSUMPTION_RATE = 1.0  # El cepillo gasta mucha energía
 MOTOR_CONSUMPTION_RATE = 0.5  # Motores de tracción (cada uno)
 IDLE_CONSUMPTION_RATE = 0.1   # Consumo de la electrónica cuando está quieto
 
-state = "FORWARD"
+# --- 2. CONFIGURACIÓN DEL GEMELO DIGITAL ---
+# Conectar con el ESP32-S3 físico
+try:
+    esp32 = serial.Serial('COM8', 115200, timeout=0.01)
+    conexion_hardware = True
+    print("[SISTEMA] Enlace HIL establecido en COM8.")
+except:
+    conexion_hardware = False
+    print("[ADVERTENCIA] ESP32 no detectado en COM8. Simulando a ciegas.")
+
+factor_suciedad = 0.0
+UMBRAL_PERDIDA_KW = 1500.0 # Tolerancia antes de limpiar
+prediccion_ideal_kw = 11426.35 # Valor por defecto si falla el ESP32
+
+state = "IDLE"
 turn_direction = 1
 turn_counter = 0
 initial_wheel_pos = 0.0
+print_timer = 0
 
 brush_motor.setVelocity(BRUSH_SPEED)
 
 # Variable para imprimir el porcentaje de batería sin saturar la consola
 print_timer = 0
+print("--- INICIANDO SISTEMA CIBERFÍSICO ---")
 
 while robot.step(TIME_STEP) != -1:
     left_val = ds_left.getValue()
     right_val = ds_right.getValue()
     current_wheel_pos = ps_left.getValue()
+    
+    # --- 3. LECTURA SERIAL Y GEMELO DIGITAL ---
+    if conexion_hardware and esp32.in_waiting > 0:
+        linea = esp32.readline().decode('utf-8').strip()
+        # Parsear la línea del ESP32 buscando la predicción (Ej: "=> Predicción: 11426.35 kW")
+        if "Predicción:" in linea:
+            try:
+                # Extraer el valor numérico (ajustar índice según tu print en C++)
+                partes = linea.split("Predicción: ")
+                prediccion_ideal_kw = float(partes[1].split(" ")[0])
+            except:
+                pass 
+
+    # Simulación física: El polvo cae constantemente
+    factor_suciedad += 0.00005 
+
+    # Matemática del desgaste
+    energia_real = prediccion_ideal_kw * (1.0 - factor_suciedad)
+    delta_P = prediccion_ideal_kw - energia_real
 
     # --- SIMULACIÓN DE BATERÍA ---
     # Convertimos los milisegundos del TIME_STEP a segundos (dt)
     dt = TIME_STEP / 1000.0 
     
-    if state in ["STOP", "OUT_OF_BATTERY"]:
+    if state in ["IDLE", "STOP", "OUT_OF_BATTERY"]:
         current_battery -= IDLE_CONSUMPTION_RATE * dt
     else:
         # Consume energía del cepillo + 2 motores + electrónica base
         total_consumption = BRUSH_CONSUMPTION_RATE + (MOTOR_CONSUMPTION_RATE * 2) + IDLE_CONSUMPTION_RATE
         current_battery -= total_consumption * dt
+        # Si el cepillo gira, limpiamos el polvo virtual
+        factor_suciedad -= 0.002 
+        if factor_suciedad < 0: factor_suciedad = 0.0
 
     if current_battery <= 0 and state != "OUT_OF_BATTERY":
         current_battery = 0
@@ -74,11 +113,24 @@ while robot.step(TIME_STEP) != -1:
         right_motor.setVelocity(0.0)
         brush_motor.setVelocity(0.0)
         print("\n[ALERTA] ¡Batería agotada! El robot se ha apagado a mitad del trabajo.")
-
-    # Imprimir estado de la batería cada ~1 segundo
+    
+    # --- 4. MÁQUINA DE ESTADOS MODIFICADA ---
+    if state == "IDLE":
+        left_motor.setVelocity(0.0)
+        right_motor.setVelocity(0.0)
+        
+        # El Disparador Ciberfísico
+        if delta_P > UMBRAL_PERDIDA_KW and current_battery > 50.0:
+            print(f"\n[ALERTA] Delta P crítico detectado: {delta_P:.2f} kW. Iniciando rutina Zig-Zag.")
+            state = "FORWARD"
+    
+    # Imprimir telemetría cada 1 segundo para no saturar la consola
     print_timer += dt
     if print_timer >= 1.0 and state != "OUT_OF_BATTERY":
-        print(f"Batería restante: {current_battery:.1f}%")
+        if state == "IDLE":
+            print(f"Monitor -> Ideal: {prediccion_ideal_kw:.1f} kW | Real: {energia_real:.1f} kW | Pérdida: {delta_P:.1f} kW (Umbral: {UMBRAL_PERDIDA_KW})")
+        else:
+            print(f"Limpiando... Batería restante: {current_battery:.1f}%")
         print_timer = 0
     # -----------------------------
 
@@ -119,11 +171,11 @@ while robot.step(TIME_STEP) != -1:
         
         # Corrección: Detectar vacío durante el cambio de carril (Fin del panel)
         if (left_val > EDGE_THRESHOLD) or (right_val > EDGE_THRESHOLD):
-            state = "STOP"
+            state = "IDLE"
             left_motor.setVelocity(0.0)
             right_motor.setVelocity(0.0)
             brush_motor.setVelocity(0.0)
-            print("\n[ÉXITO] ¡Limpieza terminada exitosamente!")
+            print("\n[ÉXITO] Limpieza terminada. Retornando a monitoreo de energía.")
             
         elif abs(current_wheel_pos - initial_wheel_pos) >= TARGET_SHIFT:
             state = "TURN_2"
